@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>РЭА Минэнерго / virtual universe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0b0b0e;
+            color: #e3e9f2;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+                         Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.27;
+        }
+
+        .center-container {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            backdrop-filter: blur(0.3px);
+        }
+
+        .terminal {
+            background: transparent;
+            padding: 2.5rem;
+            border: 1px solid rgba(70, 140, 255, 0.25);
+            backdrop-filter: blur(2px);
+            width: 100%;
+            max-width: 950px;
+            box-shadow: 0 0 30px rgba(0, 40, 80, 0.3);
+            transition: border 0.5s ease;
+            margin-bottom: 2rem;
+        }
+
+        .terminal:hover {
+            border: 1px solid rgba(100, 200, 255, 0.45);
+        }
+
+        #typed-text {
+            font-size: 1.87rem;
+            font-weight: 350;
+            line-height: 1.5;
+            color: #ffffff;
+            font-family: 'Inter', 'SF Pro Display', 'Courier New', monospace;
+            letter-spacing: -0.5px;
+            text-transform: none;
+            text-shadow: 0 0 15px rgba(60, 160, 255, 0.4);
+            word-break: break-word;
+            min-height: 18rem;
+            border-right: 4px solid #48c8ff;
+            display: inline;
+            padding-right: 8px;
+            animation: blinkCursor 1.2s infinite;
+            white-space: pre-wrap;
+        }
+
+        @keyframes blinkCursor {
+            0%, 100% { border-right-color: #48c8ff; }
+            50% { border-right-color: transparent; }
+        }
+
+        /* Стили кнопки */
+        .join-button {
+            display: inline-block;
+            padding: 1.2rem 3.5rem;
+            background: transparent;
+            border: 1.5px solid #4f9fff;
+            color: #e3f0ff;
+            font-family: 'Inter', 'Courier New', monospace;
+            font-size: 1.4rem;
+            font-weight: 400;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-decoration: none;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 0 20px rgba(79, 159, 255, 0.2);
+            transition: all 0.4s ease;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease, transform 0.8s ease, border 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 0;
+            position: relative;
+            z-index: 10;
+            margin-top: 0.5rem;
+        }
+
+        .join-button.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .join-button:hover {
+            border: 1.5px solid #a0d0ff;
+            background: rgba(79, 159, 255, 0.08);
+            box-shadow: 0 0 35px rgba(79, 159, 255, 0.4);
+            color: #ffffff;
+        }
+
+        .join-button:active {
+            transform: scale(0.98);
+        }
+
+        .micro-signal {
+            position: fixed;
+            bottom: 18px;
+            right: 24px;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #2e607a;
+            font-size: 0.7rem;
+            letter-spacing: 4px;
+            opacity: 0.25;
+        }
+
+        .dot-micro {
+            width: 6px;
+            height: 6px;
+            background: #2f8cb0;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 700px) {
+            #typed-text {
+                font-size: 1.3rem;
+                min-height: 16rem;
+            }
+            .terminal {
+                padding: 1.5rem;
+            }
+            .join-button {
+                padding: 1rem 2.5rem;
+                font-size: 1.2rem;
+                letter-spacing: 3px;
+            }
+        }
+
+        @media (max-width: 500px) {
+            #typed-text {
+                font-size: 1rem;
+            }
+            .join-button {
+                padding: 0.8rem 2rem;
+                font-size: 1rem;
+            }
+        }
+
+        ::selection {
+            background: #183c5a;
+            color: #f0f6ff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-canvas"></canvas>
+
+    <div class="center-container">
+        <div class="terminal">
+            <span id="typed-text"></span>
+        </div>
+        
+        <!-- КНОПКА ПОЯВЛЯЕТСЯ ПОСЛЕ ПЕЧАТИ -->
+        <a href="#" id="join-button" class="join-button" target="_blank" rel="noopener noreferrer">Присоединиться</a>
+    </div>
+
+    <div class="micro-signal">
+        <span class="dot-micro"></span>
+        <span>······</span>
+    </div>
+
+    <script>
+        (function() {
+            "use strict";
+
+            // ---------- МАТРИЧНЫЙ ДОЖДЬ ----------
+            const canvas = document.getElementById('matrix-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯабвгдежзиклмнопрстуфхцчшщэюя~!@#$%^&*()_+{}[]:;<>,.?/|\\=+-*/";
+            
+            let fontSize = 18;
+            let columnCount = 0;
+            let drops = [];
+            
+            function getMatrixColor(isHead = false) {
+                if (isHead) return '#c0e2ff';
+                const colors = ['#3c8db0', '#4f9fff', '#68b0e0', '#7fc0ff', '#5da0d0', '#48b0e8', '#2f8cb0'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                columnCount = Math.floor(canvas.width / (fontSize * 0.8));
+                drops = new Array(columnCount);
+                for (let i = 0; i < columnCount; i++) {
+                    drops[i] = Math.floor(Math.random() * -canvas.height / fontSize);
+                }
+            }
+
+            function drawMatrix() {
+                ctx.fillStyle = 'rgba(11, 11, 14, 0.062)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.font = fontSize + 'px "Courier New", "MS Gothic", "Lucida Console", monospace';
+                
+                for (let i = 0; i < columnCount; i++) {
+                    const char = chars[Math.floor(Math.random() * chars.length)];
+                    const x = i * (fontSize * 0.8);
+                    const y = drops[i] * fontSize;
+                    
+                    const isHead = (Math.random() > 0.95);
+                    ctx.fillStyle = getMatrixColor(isHead);
+                    ctx.fillText(char, x, y);
+                    
+                    if (y > canvas.height && Math.random() > 0.98) {
+                        drops[i] = 0;
+                    }
+                    drops[i] += 0.5 + Math.random() * 0.4;
+                    
+                    if (Math.random() > 0.8) {
+                        ctx.fillStyle = '#2a607a';
+                        ctx.fillText(chars[Math.floor(Math.random() * chars.length)], x, y + fontSize * 0.6);
+                    }
+                }
+            }
+
+            let matrixInterval;
+            function startMatrix() {
+                if (matrixInterval) clearInterval(matrixInterval);
+                matrixInterval = setInterval(drawMatrix, 38);
+            }
+
+            window.addEventListener('resize', function() {
+                resizeCanvas();
+            });
+
+            resizeCanvas();
+            startMatrix();
+
+            window.addEventListener('beforeunload', function() {
+                clearInterval(matrixInterval);
+            });
+
+            // ---------- ЭФФЕКТ ПЕЧАТИ С КЛАВИАТУРЫ ----------
+            const textElement = document.getElementById('typed-text');
+            const button = document.getElementById('join-button');
+            
+            // УСТАНАВЛИВАЕМ ССЫЛКУ (заглушка, можно заменить на реальную)
+            button.href = "https://www.rea.gov.ru"; // замените на нужный URL
+            
+            const fullText = "connect_to_virtual_universe\nРЭА МИН[ЭНЕРГО]***\n...connect...\n...connect...\n...\n...\n...\nдоступ разрешен и рекомендован\n...\nДОБРО ПОЖАЛОВАТЬ В БУДУЩЕЕ!";
+            
+            let currentIndex = 0;
+            
+            function typeEffect() {
+                if (currentIndex < fullText.length) {
+                    textElement.textContent = fullText.substring(0, currentIndex + 1);
+                    currentIndex++;
+                    setTimeout(typeEffect, 130);
+                } else {
+                    // Текст полностью напечатан - убираем курсор и показываем кнопку
+                    textElement.style.animation = 'none';
+                    textElement.style.borderRight = 'none';
+                    
+                    // Показываем кнопку с эффектом появления
+                    setTimeout(() => {
+                        button.classList.add('visible');
+                    }, 200);
+                }
+            }
+
+            setTimeout(() => {
+                typeEffect();
+            }, 300);
+            
+        })();
+    </script>
+</body>
+</html>
