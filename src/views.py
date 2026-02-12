@@ -1,3 +1,8 @@
-from django.shortcuts import render
+from django.views.generic import TemplateView
 
-# Create your views here.
+class ShowUploadPage(TemplateView):
+    template_name = "src/upload.html"
+
+class ShowMainPage(TemplateView):
+    template_name = "src/index.html"
+    
